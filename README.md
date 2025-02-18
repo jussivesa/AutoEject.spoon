@@ -38,4 +38,3 @@ You can temporarily stop the spoon by calling `AutoEject:stop()` and then restar
 local AutoEject = hs.loadSpoon("AutoEject"):configure{
   ejectDailyAt = "14:30"
 }:start()
-`
