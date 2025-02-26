@@ -23,6 +23,34 @@ local function ejectDisk()
   hs.notify.show("AutoEject", "Ejected TimeMachine disk", "")
 end
 
+-- Function to calculate the next occurrence of the target time
+local function getNextTriggerTime(ejectDailyAt)
+    local now = os.date("*t")
+    local targetHour, targetMin = ejectDailyAt:match("(%d+):(%d+)")
+    targetHour, targetMin = tonumber(targetHour), tonumber(targetMin)
+    
+    local triggerTime = os.time({
+        year = now.year,
+        month = now.month,
+        day = now.day,
+        hour = targetHour,
+        min = targetMin,
+        sec = 0
+    })
+    
+    -- If the target time has already passed today, schedule for tomorrow
+    if triggerTime <= os.time() then
+        triggerTime = triggerTime + 86400 -- Add 24 hours in seconds
+    end
+
+    local nextTrigger = triggerTime - os.time()
+    local nextTriggerHHMM = os.date("%H:%M", triggerTime)
+
+    print("AutoEject: Next trigger at " .. nextTriggerHHMM .. " (" .. nextTrigger / 60 .. " minutes from now)")
+    
+    return nextTrigger
+end
+
 function AutoEject:init()
   self.ejectTimer = nil
 end
@@ -40,9 +68,12 @@ function AutoEject:start()
 
   print("AutoEject: Started timer")
 
-  self.ejectTimer = hs.timer.doAt(self.ejectDailyAt, function(t)
+  -- Create and start the timer
+  self.ejectTimer = hs.timer.doAfter(getNextTriggerTime(self.ejectDailyAt), function(t)
     stopBackup()
     ejectDisk()
+    -- Restart the timer for the next day
+    self.ejectTimer:setNextTrigger(getNextTriggerTime(self.ejectDailyAt))
   end)
 end
 
